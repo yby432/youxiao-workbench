@@ -29,21 +29,32 @@ node server.js 3000     # 指定端口
 - **手机访问地址**：`http://<电脑局域网IP>:8080`（如 `http://192.168.1.110:8080`）
 - 二维码（安装了 qrcode 后显示，手机扫码直接打开）
 
-## 🌍 公网访问（免费，无需注册）
+## 🌍 永久公网地址（GitHub Pages，推荐）
 
-使用 Cloudflare Quick Tunnel（`tools/cloudflared.exe`，已随项目下载）：
+**`https://yby432.github.io/youxiao-workbench/`**
+
+- 永久固定、真 https（PWA 离线缓存 / 添加到主屏幕完整生效）、全球可访问
+- 手机打开后：安卓 Chrome 菜单「安装应用」/「添加到主屏幕」，苹果 Safari 分享「添加到主屏幕」
+- 永久地址二维码：`assets/qr-public.png`
+- 代码仓库：https://github.com/yby432/youxiao-workbench
+
+**本地改了内容，一键发布到线上：**
+
+```powershell
+# 在 youxiao-workbench 目录下（用 GitHub Desktop 自带的 git）
+.\update-gh.ps1
+```
+
+（约 1 分钟后 GitHub Pages 自动更新生效；更新脚本会自动提交并推送 main 分支）
+
+### 备用：免费临时公网隧道（Cloudflare Quick Tunnel）
 
 ```bash
 cd youxiao-workbench
 .\tools\cloudflared.exe tunnel --url http://localhost:8080 --no-autoupdate
 ```
 
-启动后终端会打印一个 **`https://xxxx.trycloudflare.com`** 地址，任何网络（4G/5G/别的 WiFi）都能打开。这是真 https，PWA 离线缓存、添加到主屏幕全部完整生效。公网地址二维码已生成在 `assets/qr-public.png`。
-
-> ⚠️ **注意事项**：Quick Tunnel 是临时隧道——
-> - 每次重新启动 cloudflared 都会生成**新的随机地址**（原地址失效）
-> - 电脑关机/断网会导致隧道断开
-> - 想长期固定地址：① 注册免费 Cloudflare 账号用 Named Tunnel；② 或直接把 `youxiao-workbench/` 部署到 Vercel/Netlify/Cloudflare Pages（纯静态，无后端依赖）
+启动后终端会打印一个 `https://xxxx.trycloudflare.com` 地址。注意每次重启地址都会变，适合临时应急，不适合长期使用。
 
 ## 📱 放到手机桌面（核心功能）
 
