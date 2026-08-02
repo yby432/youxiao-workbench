@@ -98,11 +98,14 @@ RENDERERS.shezhi = function () {
       <div class="card-foot">粘贴后，语文页的「打开跟练视频」按钮就会生效</div>
     </div>
     <div class="card">
-      <div class="card-head">💾 数据</div>
+      <div class="card-head">💾 数据备份与恢复</div>
       <div class="btn-row">
         <button class="mini-btn" onclick="exportData()">📤 导出备份</button>
+        <button class="mini-btn primary" onclick="document.getElementById('import-file').click()">📥 导入备份</button>
         <button class="mini-btn danger" onclick="resetAll()">🗑️ 清空所有数据</button>
       </div>
+      <input type="file" id="import-file" accept=".json,application/json" style="display:none" onchange="importData(this)">
+      <div class="card-foot">导出会下载一个 JSON 文件；把文件传到手机后，在手机版工作台点「导入备份」选它，数据就恢复啦</div>
     </div>
     <div class="about">幼小衔接工作台 v1.0 · 纯本地运行，数据保存在这台设备上 💕</div>`;
 };
@@ -154,6 +157,34 @@ function exportData() {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = '幼小衔接工作台备份-' + todayStr() + '.json';
   a.click();
+  alert('📤 备份文件已下载！\n\n恢复方法：把文件传到手机 → 手机打开工作台 → 设置 → 「导入备份」→ 选择该文件');
+}
+function importData(input) {
+  const file = input.files && input.files[0];
+  if (!file) { input.value = ''; return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const d = JSON.parse(e.target.result);
+      if (!d || typeof d !== 'object' || !Array.isArray(d.tasks)) throw new Error('不是有效的工作台备份文件');
+      const msg = `将导入：任务 ${d.tasks.length} 个、积分 ${d.points || 0} 分、错题 ${(d.mistakes || []).length} 条、兑换记录 ${(d.history || []).length} 条。\n当前手机上的数据会被覆盖，确定恢复吗？`;
+      if (!confirm(msg)) { input.value = ''; return; }
+      state.tasks = d.tasks;
+      state.points = typeof d.points === 'number' ? d.points : 0;
+      state.rewards = Array.isArray(d.rewards) && d.rewards.length ? d.rewards : DEFAULT_REWARDS.map(r => ({ ...r }));
+      state.history = d.history || [];
+      state.mistakes = d.mistakes || [];
+      state.log = d.log || {};
+      saveState();
+      confetti();
+      alert('✅ 备份恢复成功！页面即将刷新');
+      setTimeout(() => location.reload(), 600);
+    } catch (err) {
+      alert('❌ 导入失败：' + err.message);
+    }
+    input.value = '';
+  };
+  reader.readAsText(file);
 }
 function resetAll() {
   if (confirm('确定清空所有打卡、积分、错题数据吗？此操作不可恢复！')) {
