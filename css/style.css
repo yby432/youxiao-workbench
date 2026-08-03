@@ -337,6 +337,12 @@ body {
 .bar-dot.full { background: #6bcb77; } .bar-dot.part { background: #ffd93d; } .bar-dot.none { background: #f0f0f5; } .bar-dot.madeup { background: #8ee08e; }
 .weak-tip { background: #fff3bf; border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.7; }
 .weak-chars { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.unit-progress-list { display: flex; flex-direction: column; gap: 7px; }
+.unit-progress-item { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.up-name { width: 96px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.up-bar { flex: 1; height: 10px; background: #ffe3ee; border-radius: 999px; overflow: hidden; }
+.up-bar i { display: block; height: 100%; background: linear-gradient(90deg, #7fce9f, #6bcb77); border-radius: 999px; transition: width .5s; }
+.up-num { width: 44px; text-align: right; color: var(--sub); font-weight: 700; }
 
 /* ---------- 商城 ---------- */
 .point-card { background: linear-gradient(135deg, #fff7cc, #ffe066); border: 2px solid #ffe066; text-align: center; }
@@ -351,6 +357,36 @@ body {
 .shop-cost { display: block; font-size: 12px; font-weight: 800; color: var(--orange); margin-bottom: 6px; }
 .his-item { font-size: 13px; padding: 7px 0; border-bottom: 1px dashed #ffe3ee; display: flex; justify-content: space-between; }
 .his-item span { color: var(--sub); font-size: 11px; }
+
+/* ---------- 识字新样式 ---------- */
+.learn-char-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.learn-char {
+  width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  font-size: 24px; font-weight: 800; cursor: pointer; transition: transform .12s;
+}
+.learn-char:active { transform: scale(.9); }
+.learn-char.lc-new { background: #f0f0f5; color: #b8b8cc; }
+.learn-char.lc-mid { background: #fff3bf; color: #8a6d00; }
+.learn-char.lc-ok { background: #eefbe9; color: var(--green); }
+.learn-char.active { outline: 3px solid var(--orange); outline-offset: 2px; transform: scale(1.08); }
+.sz-detail-head { display: flex; gap: 14px; align-items: flex-start; }
+.sz-bigchar { font-size: 64px; font-weight: 800; color: var(--purple); cursor: pointer; line-height: 1; }
+.sz-info { flex: 1; }
+.sz-py { font-size: 18px; color: var(--blue); font-weight: 700; }
+.sz-fields { display: flex; gap: 8px; font-size: 13px; color: var(--ink); margin: 4px 0; flex-wrap: wrap; }
+.sz-fields span { background: #fff7e8; border-radius: 8px; padding: 3px 9px; font-weight: 700; }
+.sz-word { font-size: 13px; color: var(--orange); font-weight: 700; }
+.sz-meta { font-size: 11px; color: var(--sub); margin-top: 4px; }
+.sz-state-btns { display: flex; flex-direction: column; gap: 6px; }
+.sz-stroke-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.sz-canvas-box { text-align: center; }
+.sz-canvas-title { font-size: 12px; font-weight: 700; color: var(--sub); display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 6px; }
+.sz-canvas-box canvas { width: 100%; max-width: 220px; background: #fffaf3; border: 2px solid #ffe9c9; border-radius: 14px; touch-action: none; }
+.lesson-block { margin-bottom: 8px; }
+.lesson-title { font-size: 13px; font-weight: 800; color: var(--blue); margin-bottom: 4px; }
+.lesson-chars { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.unit-char.big { font-size: 22px; width: 42px; height: 42px; }
+.unit-char.small { font-size: 15px; width: 32px; height: 32px; border-radius: 8px; }
 
 /* ---------- 家长中心 ---------- */
 .add-row { display: flex; gap: 7px; margin-bottom: 11px; flex-wrap: wrap; }

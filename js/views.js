@@ -180,6 +180,14 @@ RENDERERS.shuju = function () {
         <div class="stat-cell ok"><b>${st.mastered}</b><span>已掌握</span></div>
         <div class="stat-cell warn"><b>${st.weak}</b><span>薄弱</span></div>
       </div>
+      <div class="chart-title">单元掌握率（会写字）</div>
+      <div class="unit-progress-list">${unitProgress().map(u => `
+        <div class="unit-progress-item">
+          <span class="up-name">${esc(u.unit)}${u.semester}册</span>
+          <div class="up-bar"><i style="width:${u.pct}%"></i></div>
+          <span class="up-num">${u.mastered}/${u.total}</span>
+        </div>`).join('')}
+      </div>
       <div class="chart-title">近 7 天每日掌握生字</div>
       <div class="bar-chart">${trend.map(d => `
         <div class="bar-col"><div class="bar-val">${d.mastered || ''}</div>
@@ -211,6 +219,14 @@ function weakAllMastered() {
   if (!confirm('把薄弱字本里的字全部标记为已掌握？')) return;
   state.weakHanzi.slice().forEach(w => { markHanzi(w, 'mastered'); removeWeakHanzi(w); });
   renderPage('shuju');
+}
+/* 各单元会写字掌握率 */
+function unitProgress() {
+  return YI_NIANJI.map(u => {
+    let total = 0, mastered = 0;
+    u.lessons.forEach(l => l.write.forEach(c => { total++; if (hzStatus(c) === 'mastered') mastered++; }));
+    return { unit: u.unit, semester: u.semester, total, mastered, pct: total ? Math.round(mastered / total * 100) : 0 };
+  });
 }
 function weekTrend() {
   const out = [];

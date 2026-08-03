@@ -252,11 +252,15 @@ function addWeakHanzi(c) {
 function removeWeakHanzi(c) {
   state.weakHanzi = state.weakHanzi.filter(x => x !== c); saveState();
 }
-/* 识字统计 */
+/* 识字统计（基于人教版一年级字库） */
 function hanziStats() {
   let learned = 0, mastered = 0;
-  HANZI.forEach(h => { const s = hzStatus(h.c); if (s === 'mastered') mastered++; if (s === 'learned' || s === 'mastered') learned++; });
-  return { total: HANZI.length, learned, mastered, weak: state.weakHanzi.length };
+  for (const k of Object.keys(HANZI_DATA)) {
+    const s = hzStatus(k);
+    if (s === 'mastered') mastered++;
+    if (s !== 'new') learned++;
+  }
+  return { total: Object.keys(HANZI_DATA).length, learned, mastered, weak: state.weakHanzi.length };
 }
 
 /* ---------- 导航（底部 6 Tab + 12 页面） ---------- */

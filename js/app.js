@@ -15,86 +15,237 @@ function moduleTop(icon, title, sub) {
 }
 
 /* ============================================================
- * 模块一：识字（人教版字表 · 状态机 · 练习 · 听写 · 闪卡）
+
+/* ============================================================
+ * 模块一：识字（人教版字表 · 按课推进 · 笔顺动画 · 临摹 · 三态）
  * ============================================================ */
-const UNIT_SIZE = 25; // 虚拟单元分组
+
+/* 当前学习位置：第一个未学的会写字所在的课 */
+function currentLessonInfo() {
+  for (const f of FLAT_CHARS) {
+    if (f.type === 'write' && hzStatus(f.char) === 'new') return { unit: f.unit, lesson: f.lesson };
+  }
+  return null;
+}
+/* 某课的字 */
+function lessonChars(unit, lesson) {
+  const set = new Set();
+  YI_NIANJI.forEach(u => u.lessons.forEach(l => {
+    if (u.unit === unit && l.lesson === lesson) {
+      l.write.forEach(c => set.add(c));
+      l.read.forEach(c => set.add(c));
+    }
+  }));
+  return [...set];
+}
+/* ---------- 笔顺动画 ---------- */
+let _curChar = null;
+function playStroke(c) {
+  const d = HANZI_DATA[c];
+  const cv = document.getElementById('sz-stroke');
+  if (!cv) return;
+  if (!d || !d.medians) { speak(c, 'zh-CN'); return; }
+  drawStrokeBase(c, true);
+  const ctx = cv.getContext('2d');
+  const S = cv.width;
+  const colors = ['#f5963c', '#4d96ff', '#6bcb77', '#c56cf0', '#ff6b6b', '#ff9f45', '#8fb8e8', '#7fce9f'];
+  let i = 0;
+  clearInterval(window._strokeTimer);
+  window._strokeTimer = setInterval(() => {
+    if (i >= d.medians.length) { clearInterval(window._strokeTimer); return; }
+    ctx.strokeStyle = colors[i % colors.length];
+    ctx.lineWidth = 11; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    const pts = d.medians[i];
+    ctx.beginPath();
+    pts.forEach((p, ii) => { const x = p[0] * S / 1024, y = p[1] * S / 1024; ii ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+    ctx.stroke();
+    const last = pts[pts.length - 1];
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.font = 'bold 15px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(String(i + 1), last[0] * S / 1024, last[1] * S / 1024 - 8);
+    i++;
+  }, 380);
+}
+function drawStrokeBase(c, clear) {
+  const d = HANZI_DATA[c];
+  const cv = document.getElementById('sz-stroke');
+  if (!cv || !d || !d.medians) return;
+  const ctx = cv.getContext('2d');
+  const S = cv.width;
+  if (clear) ctx.clearRect(0, 0, S, S);
+  ctx.lineWidth = 11; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.strokeStyle = '#ead8ea';
+  d.medians.forEach(pts => {
+    ctx.beginPath();
+    pts.forEach((p, ii) => { const x = p[0] * S / 1024, y = p[1] * S / 1024; ii ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+    ctx.stroke();
+  });
+}
+/* ---------- 手指临摹 ---------- */
+function setupTrace(c) {
+  const cv = document.getElementById('sz-trace');
+  if (!cv) return;
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.fillStyle = 'rgba(150,150,170,.22)';
+  ctx.font = '150px serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(c, cv.width / 2, cv.height / 2 + 6);
+  window._tracing = false; window._traceLast = null;
+}
+function clearTrace() { if (_curChar) setupTrace(_curChar); }
+function bindTraceEvents() {
+  const on = (e, t) => {
+    const cv = e.target && e.target.id === 'sz-trace' ? e.target : null;
+    if (!cv) return;
+    if (t === 'start') { window._tracing = true; window._traceLast = null; }
+    if (t === 'end') { window._tracing = false; window._traceLast = null; return; }
+    if (!window._tracing) return;
+    const rect = cv.getBoundingClientRect();
+    const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+    const ctx = cv.getContext('2d');
+    ctx.lineWidth = 14; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#4d96ff';
+    const last = window._traceLast;
+    if (last) { ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(x, y); ctx.stroke(); }
+    else { ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.fillStyle = '#4d96ff'; ctx.fill(); }
+    window._traceLast = { x, y };
+  };
+  document.addEventListener('touchstart', e => on(e, 'start'), { passive: true });
+  document.addEventListener('touchmove', e => { on(e, 'move'); if (window._tracing) e.preventDefault(); }, { passive: false });
+  document.addEventListener('touchend', () => on({ target: document.getElementById('sz-trace') }, 'end'), { passive: true });
+  document.addEventListener('mousedown', e => on(e, 'start'));
+  document.addEventListener('mousemove', e => on(e, 'move'));
+  document.addEventListener('mouseup', () => on({ target: document.getElementById('sz-trace') }, 'end'));
+}
+bindTraceEvents();
+
+/* ---------- 识字页 ---------- */
+function selectChar(c) {
+  _curChar = c;
+  const info = HANZI_DATA[c] || {};
+  const box = document.getElementById('sz-detail');
+  if (!box) return;
+  const st = hzStatus(c);
+  box.innerHTML = `
+    <div class="sz-detail-head">
+      <div class="sz-bigchar" onclick="speak('${c}','zh-CN')">${c}</div>
+      <div class="sz-info">
+        <div class="sz-py">${info.py || ''}</div>
+        <div class="sz-fields"><span>部首 ${esc(info.radical || '—')}</span><span>${info.strokes || '—'} 画</span></div>
+        ${info.word ? `<div class="sz-word">组词：${esc(info.word)}</div>` : ''}
+        <div class="sz-meta">${esc(info.unit || '')} · ${esc(info.lesson || '')}${info.type === 'write' ? ' · 会写' : ' · 会认'}</div>
+      </div>
+      <div class="sz-state-btns">
+        <button class="mini-btn ${st === 'learned' || st === 'mastered' ? '' : 'primary'}" onclick="markHanzi('${c}','learned')">${st === 'learned' || st === 'mastered' ? '🟡 已学' : '📖 学习'}</button>
+        <button class="mini-btn ${st === 'mastered' ? 'ok-b' : ''}" onclick="markHanzi('${c}','mastered')">${st === 'mastered' ? '✅ 已掌握' : '🌟 掌握了'}</button>
+      </div>
+    </div>
+    <div class="sz-stroke-row">
+      <div class="sz-canvas-box"><div class="sz-canvas-title">✍️ 笔顺动画 <button class="mini-btn" onclick="playStroke('${c}')">▶ 播放</button></div>
+        <canvas id="sz-stroke" width="220" height="220"></canvas></div>
+      <div class="sz-canvas-box"><div class="sz-canvas-title">🖐️ 手指临摹 <button class="mini-btn" onclick="clearTrace()">🧽 清空</button></div>
+        <canvas id="sz-trace" width="220" height="220"></canvas></div>
+    </div>`;
+  setTimeout(() => { drawStrokeBase(c, false); setupTrace(c); }, 30);
+}
 RENDERERS.shizi = function () {
   const page = document.getElementById('page-shizi');
   const st = hanziStats();
-  const today = blockByDay(HANZI, 5, seedNow());
+  const cur = currentLessonInfo();
+  const learnChars = cur ? lessonChars(cur.unit, cur.lesson).filter(c => HANZI_DATA[c] && HANZI_DATA[c].type === 'write') : [];
+  if (!_curChar || !HANZI_DATA[_curChar]) {
+    const firstNew = cur ? learnChars.find(c => hzStatus(c) === 'new') : null;
+    _curChar = firstNew || (cur ? learnChars[0] : Object.keys(HANZI_DATA)[0]);
+  }
   page.innerHTML = `
-    ${moduleTop('🀄', '识字乐园', '人教版字表 · 同步学习')}
+    ${moduleTop('🀄', '识字乐园', '人教版一年级字表 · 按课学习')}
     <div class="stat-strip">
       <div class="stat-cell"><b>${st.total}</b><span>总字库</span></div>
       <div class="stat-cell"><b>${st.learned}</b><span>已学</span></div>
-      <div class="stat-cell"><b>${st.mastered}</b><span>已掌握</span></div>
+      <div class="stat-cell ok"><b>${st.mastered}</b><span>已掌握</span></div>
       <div class="stat-cell warn"><b>${st.weak}</b><span>薄弱</span></div>
     </div>
+    ${cur ? `
     <div class="card">
-      <div class="card-head">✏️ 今日新字 <span class="sub">点字卡学习</span></div>
-      <div class="hz-learn-grid">${today.map(h => {
-        const s = hzStatus(h.c);
-        const badge = s === 'mastered' ? '<em class="hz-badge ok">✅ 掌握</em>' : (s === 'learned' ? '<em class="hz-badge mid">🟡 已学</em>' : '<em class="hz-badge">⚪ 未学</em>');
-        return `
-        <div class="hz-learn-cell">
-          <div class="hz-char-big" onclick="speak('${h.c}','zh-CN')">${h.c}</div>
-          <div class="hz-py">${h.py}</div>
-          <div class="hz-word">${esc(h.w)}</div>
-          ${badge}
-          <div class="hz-btns">
-            <button class="mini-btn ${s === 'learned' || s === 'mastered' ? '' : 'primary'}" onclick="markHanzi('${h.c}','learned')">${s === 'learned' || s === 'mastered' ? '✓ 已学' : '📖 学习'}</button>
-            <button class="mini-btn ${s === 'mastered' ? 'ok-b' : ''}" onclick="markHanzi('${h.c}','mastered')">${s === 'mastered' ? '🌟 已掌握' : '🌟 掌握了'}</button>
-          </div>
-        </div>`;}).join('')}
-      </div>
-      <div class="card-foot">点「学习」记为已学，完成练习后点「掌握了」变绿色 ✅</div>
+      <div class="card-head">📖 当前课文 <span class="sub">${esc(cur.unit)} · ${esc(cur.lesson)}</span></div>
+      <div class="learn-char-row">${learnChars.map(c => {
+        const s = hzStatus(c);
+        const cls = s === 'mastered' ? 'lc-ok' : (s === 'learned' ? 'lc-mid' : 'lc-new');
+        return `<span class="learn-char ${cls} ${c === _curChar ? 'active' : ''}" onclick="selectChar('${c}')">${c}</span>`;
+      }).join('')}</div>
+      <div class="card-foot">本课会写字 ${learnChars.length} 个 · 一个一个学，全部变绿就进入下一课 🚀</div>
       <div style="margin-top:10px">${punchBtn('t-shizi', '完成今日识字打卡 +5🪙')}</div>
     </div>
     <div class="card">
+      <div class="card-head">🔍 生字学习</div>
+      <div id="sz-detail"><div class="empty-tip">正在加载…</div></div>
+    </div>` : `
+    <div class="card"><div class="empty-tip">🎉 一年级会写字全部学完啦！去单元字表复习巩固吧</div></div>`}
+    <div class="card">
       <div class="card-head">🎯 随堂练习 <button class="mini-btn" onclick="shiziQuiz()">🎲 出题</button></div>
-      <div id="sz-quiz"><div class="empty-tip">把今天的字和薄弱字出成选择题，答对自动进步</div></div>
+      <div id="sz-quiz"><div class="empty-tip">从当前课文 + 薄弱字出题，全部答对自动判定「已掌握」✅</div></div>
     </div>
     <div class="card">
-      <div class="card-head">📝 生字听写 <button class="mini-btn" onclick="shiziTingxie()">🔊 开始听写</button></div>
-      <div id="sz-ting"><div class="empty-tip">点开始后播放读音，孩子写/说，家长判断会不会</div></div>
+      <div class="card-head">📝 生字听写 <button class="mini-btn" onclick="shiziTingxie()">🔊 开始</button></div>
+      <div id="sz-ting"><div class="empty-tip">播放读音，孩子写/说，家长判断会不会</div></div>
     </div>
     <div class="card">
       <div class="card-head">🃏 生字闪卡 <button class="mini-btn" onclick="shiziFlash()">▶️ 开始</button></div>
-      <div id="sz-flash"><div class="empty-tip">快速认字小游戏，看看谁认得又快又准</div></div>
+      <div id="sz-flash"><div class="empty-tip">快速认字小游戏</div></div>
     </div>
     <div class="card">
-      <div class="card-head">📚 生字表 <span class="sub">人教版一年级 · 按单元</span></div>
+      <div class="card-head">📚 单元字表 <span class="sub">人教版 · 会写=大字 会认=小字</span></div>
       <div id="sz-table">${renderHanziTable()}</div>
     </div>`;
+  if (cur) setTimeout(() => selectChar(_curChar), 30);
 };
 function renderHanziTable() {
-  const units = [];
-  for (let i = 0; i < HANZI.length; i += UNIT_SIZE) units.push(HANZI.slice(i, i + UNIT_SIZE));
-  return units.map((u, ui) => `
+  return YI_NIANJI.map(u => `
     <div class="unit-block">
-      <div class="unit-title">📖 单元 ${ui + 1} <span class="unit-count">${u.length} 字</span></div>
-      <div class="unit-chars">${u.map(h => {
-        const s = hzStatus(h.c);
-        const cls = s === 'mastered' ? 'mc-ok' : (s === 'learned' ? 'mc-mid' : 'mc-new');
-        return `<span class="unit-char ${cls}" onclick="speak('${h.c}','zh-CN')" title="${h.py} ${esc(h.w)}">${h.c}</span>`;
-      }).join('')}</div>
+      <div class="unit-title">${u.semester === '上' ? '📗' : '📘'} ${esc(u.unit)} <span class="unit-count">${u.semester}册</span></div>
+      ${u.lessons.map(l => `
+        <div class="lesson-block">
+          <div class="lesson-title">${esc(l.lesson)}</div>
+          <div class="lesson-chars">${l.write.map(c => {
+            const s = hzStatus(c);
+            const cls = s === 'mastered' ? 'mc-ok' : (s === 'learned' ? 'mc-mid' : 'mc-new');
+            return `<span class="unit-char big ${cls}" onclick="selectChar('${c}')" title="${HANZI_DATA[c] ? HANZI_DATA[c].py : ''}">${c}</span>`;
+          }).join('')}${l.read.map(c => {
+            const s = hzStatus(c);
+            const cls = s === 'mastered' ? 'mc-ok' : (s === 'learned' ? 'mc-mid' : 'mc-new');
+            return `<span class="unit-char small ${cls}" onclick="selectChar('${c}')">${c}</span>`;
+          }).join('')}</div>
+        </div>`).join('')}
     </div>`).join('');
 }
-/* 随堂练习 */
+/* 随堂练习：全对自动掌握本课会写字 */
 function shiziQuiz() {
-  const seed = seedNow();
-  const today = blockByDay(HANZI, 5, seed);
-  const pool = [...today, ...state.weakHanzi.map(w => HANZI.find(h => h.c === w)).filter(Boolean)];
-  const uniq = [...new Map(pool.map(h => [h.c, h])).values()];
-  const quiz = genPinyinQuiz(Math.min(5, uniq.length), seed + 55);
+  const pool = [];
+  const cur = currentLessonInfo();
+  if (cur) lessonChars(cur.unit, cur.lesson).forEach(c => pool.push(c));
+  state.weakHanzi.forEach(c => pool.push(c));
+  const uniq = [...new Set(pool)].filter(c => HANZI_DATA[c]);
+  while (uniq.length < 5) Object.keys(HANZI_DATA).slice(0, 8).forEach(c => uniq.push(c));
+  const quiz = genPinyinQuiz(Math.min(5, uniq.length), seedNow() + 55);
   const area = document.getElementById('sz-quiz');
-  let idx = 0, right = 0, wrongChars = [];
+  let idx = 0, right = 0; const wrongChars = [];
   function renderQ() {
     if (idx >= quiz.length) {
       wrongChars.forEach(addWeakHanzi);
-      area.innerHTML = `<div class="quiz-done">🎉 完成！答对 ${right}/${quiz.length}
-        ${wrongChars.length ? `<div class="ks-wrong">薄弱字已记入薄弱字本：${wrongChars.join('、')}</div>` : '<div class="ks-wrong ok">全部答对，太棒啦！</div>'}
-        <button class="mini-btn primary" onclick="shiziQuiz()">🔄 再来一组</button></div>`;
+      let msg = `<div class="quiz-done">🎉 完成！答对 ${right}/${quiz.length}`;
+      if (right === quiz.length) {
+        const c2 = currentLessonInfo();
+        if (c2) {
+          const chars = lessonChars(c2.unit, c2.lesson).filter(c => HANZI_DATA[c] && HANZI_DATA[c].type === 'write' && hzStatus(c) !== 'mastered');
+          chars.forEach(c => markHanzi(c, 'mastered'));
+          msg += `<div class="ks-wrong ok">🌟 达标！本课会写字「${chars.join('、') || '（已完成）'}」自动标记为已掌握</div>`;
+        } else msg += '<div class="ks-wrong ok">全部答对，太棒啦！</div>';
+      } else msg += `<div class="ks-wrong">薄弱字已归集：${wrongChars.join('、')}</div>`;
+      msg += `<button class="mini-btn primary" onclick="shiziQuiz()">🔄 再来一组</button></div>`;
+      area.innerHTML = msg;
       return;
     }
     const q = quiz[idx];
@@ -103,7 +254,7 @@ function shiziQuiz() {
       <div class="py-options">${q.options.map(o => `<button class="py-opt" onclick="szQuizAns('${esc(o)}', this, '${q.char}')">${esc(o)}</button>`).join('')}</div>
       <div id="sz-fb"></div>`;
   }
-  window._szQuiz = { next: renderQ, judge(char, opt, btn) {
+  window._szQuiz = { judge(char, opt, btn) {
     const q = quiz[idx];
     const fb = document.getElementById('sz-fb');
     if (opt === q.answer) { right++; btn.classList.add('ok'); fb.innerHTML = '<div class="fb right">✅ 答对啦！</div>'; }
@@ -114,9 +265,10 @@ function shiziQuiz() {
   renderQ();
 }
 function szQuizAns(opt, btn, char) { window._szQuiz.judge(char, opt, btn); }
-/* 听写 */
+/* 听写：当前课会写字 */
 function shiziTingxie() {
-  const today = blockByDay(HANZI, 5, seedNow());
+  const cur = currentLessonInfo();
+  const today = cur ? lessonChars(cur.unit, cur.lesson).filter(c => HANZI_DATA[c] && HANZI_DATA[c].type === 'write') : Object.keys(HANZI_DATA).slice(0, 5);
   const area = document.getElementById('sz-ting');
   let idx = 0; const notOK = [];
   function next() {
@@ -126,39 +278,40 @@ function shiziTingxie() {
         <button class="mini-btn primary" onclick="shiziTingxie()">🔄 再听写一遍</button></div>`;
       return;
     }
-    const h = today[idx];
+    const c = today[idx];
     area.innerHTML = `
       <div class="ting-tip">听第 ${idx + 1} 个字，孩子写/说，然后判断：</div>
-      <div class="ting-big" id="ting-char">🔊 ${h.c}</div>
-      <button class="mini-btn primary" onclick="speak('${h.c}','zh-CN')">🔊 再读一遍</button>
+      <div class="ting-big">🔊 ${c}</div>
+      <button class="mini-btn primary" onclick="speak('${c}','zh-CN')">🔊 再读一遍</button>
       <button class="mini-btn ok-b" onclick="tingOK()">✅ 会了</button>
       <button class="mini-btn danger" onclick="tingNO()">❌ 不会</button>`;
     window._ting = {
-      ok() { idx++; next(); },
-      no() { notOK.push(today[idx].c); idx++; next(); }
+      ok() { if (hzStatus(c) === 'new') markHanzi(c, 'learned'); idx++; next(); },
+      no() { notOK.push(c); idx++; next(); }
     };
   }
-  window._tingNext = next;
   next();
 }
 function tingOK() { window._ting.ok(); }
 function tingNO() { window._ting.no(); }
-/* 闪卡 */
+/* 闪卡：当前课字 */
 function shiziFlash() {
-  const today = blockByDay(HANZI, 5, seedNow());
+  const cur = currentLessonInfo();
+  const today = cur ? lessonChars(cur.unit, cur.lesson).filter(c => HANZI_DATA[c]) : Object.keys(HANZI_DATA).slice(0, 5);
   const area = document.getElementById('sz-flash');
   let idx = 0, showPy = false, ok = 0;
   function render() {
     if (idx >= today.length) {
-      area.innerHTML = `<div class="quiz-done">🃏 闪卡完成！认得 ${ok}/${today.length} 个
+      area.innerHTML = `<div class="quiz-done">🃏 闪卡完成！认得 ${ok}/${today.length}
         <button class="mini-btn primary" onclick="shiziFlash()">🔄 再来一轮</button></div>`;
       return;
     }
-    const h = today[idx];
+    const c = today[idx];
+    const d = HANZI_DATA[c] || {};
     area.innerHTML = `
       <div class="flash-card" onclick="flashFlip()">
-        <div class="flash-char">${showPy ? h.py : h.c}</div>
-        <div class="flash-sub">${showPy ? esc(h.w) : '点一下看拼音'}</div>
+        <div class="flash-char">${showPy ? (d.py || '') : c}</div>
+        <div class="flash-sub">${showPy ? (d.word || '') : '点一下看拼音'}</div>
       </div>
       <div class="flash-btns">
         <button class="mini-btn ok-b" onclick="flashJudge(true)">✅ 认识</button>
@@ -167,7 +320,7 @@ function shiziFlash() {
   }
   window._flash = {
     flip() { showPy = !showPy; render(); },
-    judge(know) { if (know) ok++; if (!know) addWeakHanzi(today[idx].c); idx++; showPy = false; render(); }
+    judge(know) { if (know) { ok++; if (hzStatus(today[idx]) === 'new') markHanzi(today[idx], 'learned'); } else addWeakHanzi(today[idx]); idx++; showPy = false; render(); }
   };
   render();
 }
