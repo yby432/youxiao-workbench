@@ -218,8 +218,11 @@ body {
 .py-label { font-size: 12px; font-weight: 800; color: var(--purple); background: #f3e8ff; border-radius: 8px; padding: 5px 8px; white-space: nowrap; }
 .py-chips { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; }
 .py-chips b { font-size: 13px; font-weight: 700; background: #f0f9ff; color: var(--blue); border-radius: 7px; padding: 4px 7px; }
+.py-chips b.pt { cursor: pointer; transition: transform .12s, background .15s; }
+.py-chips b.pt:active { transform: scale(1.25); background: #d6ecff; }
 .pinyin-today { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.py-item { background: #f3e8ff; border-radius: 12px; padding: 9px 4px; text-align: center; }
+.py-item { background: #f3e8ff; border-radius: 12px; padding: 9px 4px; text-align: center; cursor: pointer; transition: transform .12s; }
+.py-item:active { transform: scale(.94); }
 .py-item.three { background: #fff3bf; }
 .py-item b { font-size: 18px; color: var(--purple); }
 .py-item small { display: block; font-size: 10px; color: var(--sub); margin-top: 2px; }

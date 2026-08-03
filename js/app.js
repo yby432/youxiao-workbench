@@ -185,23 +185,24 @@ RENDERERS.pinyin = function () {
     ${moduleTop('🔤', '拼音乐园', '声母 · 韵母 · 拼读')}
     ${dayHint()}
     <div class="card">
-      <div class="card-head">📖 拼音字母表 <button class="mini-btn" onclick="speak('${SHENGMU.map(s=>s.s).join(' ')}','zh-CN')">🔊 朗读声母</button></div>
+      <div class="card-head">📖 拼音字母表 <span class="sub">点任意一个发音</span> <button class="mini-btn" onclick="speak('${SHENGMU.map(s=>s.c).join('，')}','zh-CN')">🔊 连读声母</button></div>
       <div class="py-table">
-        <div class="py-row"><span class="py-label">声母</span><span class="py-chips">${SHENGMU.map(s=>`<b>${s.s}</b>`).join('')}</span></div>
-        <div class="py-row"><span class="py-label">韵母</span><span class="py-chips">${YUNMU.map(y=>`<b>${y.y}</b>`).join('')}</span></div>
-        <div class="py-row"><span class="py-label">整体认读</span><span class="py-chips">${ZHENGTI.map(z=>`<b>${z}</b>`).join('')}</span></div>
+        <div class="py-row"><span class="py-label">声母</span><span class="py-chips">${SHENGMU.map(s=>`<b class="pt" onclick="speak('${s.c}','zh-CN')">${s.s}</b>`).join('')}</span></div>
+        <div class="py-row"><span class="py-label">韵母</span><span class="py-chips">${YUNMU.map(y=>`<b class="pt" onclick="speak('${y.c}','zh-CN')">${y.y}</b>`).join('')}</span></div>
+        <div class="py-row"><span class="py-label">整体认读</span><span class="py-chips">${ZHENGTI.map(z=>`<b class="pt" onclick="speak('${z}','zh-CN')">${z}</b>`).join('')}</span></div>
       </div>
+      <div class="card-foot">声母读"呼读音"：b 读"玻"、p 读"坡"、m 读"摸"…点字母听发音 👆</div>
     </div>
     <div class="card">
-      <div class="card-head">🔊 今日两拼练习</div>
+      <div class="card-head">🔊 今日两拼练习 <span class="sub">点音节听读音</span></div>
       <div class="pinyin-today">${practice.map(p => `
-        <div class="py-item"><b>${p.syllable}</b><small>声母 ${p.sm || '—'} · 韵母 ${p.ym} · ${p.tone}声${p.char ? `（${p.char}）` : ''}</small></div>`).join('')}
+        <div class="py-item" onclick="speak('${p.char || p.syllable}','zh-CN')"><b>${p.syllable}</b><small>声母 ${p.sm || '—'} · 韵母 ${p.ym} · ${p.tone}声${p.char ? `（${p.char}）` : ''}</small></div>`).join('')}
       </div>
     </div>
     <div class="card">
-      <div class="card-head">🧩 三拼练习 <span class="sub">声母+介母+韵母</span></div>
+      <div class="card-head">🧩 三拼练习 <span class="sub">声母+介母+韵母 · 点读音节</span></div>
       <div class="pinyin-today">${sanpin.map(p => `
-        <div class="py-item three"><b>${addTone(p[0], 1 + Math.floor(Math.random()*4))}</b><small>${p[1]} + ${p[2]} + ${p[3]}（三拼）</small></div>`).join('')}
+        <div class="py-item three" onclick="speak('${p[4] || p[0]}','zh-CN')"><b>${addTone(p[0], 1 + Math.floor(Math.random()*4))}</b><small>${p[1]} + ${p[2]} + ${p[3]}（三拼）${p[4] ? `· ${p[4]}` : ''}</small></div>`).join('')}
       </div>
     </div>
     <div class="card">
@@ -490,11 +491,12 @@ function genShapeQ() {
   const n = 3 + Math.floor(Math.random() * 5);
   const m = 2 + Math.floor(Math.random() * 3);
   const row = sym.repeat(n) + other.repeat(m);
+  const cells = [...sym.repeat(n), ...other.repeat(m)]; // 按码点展开，emoji 不会被拆散
   const opts = new Set([n, n + 1, n - 1, m, n + 2]);
   const options = [...opts].sort(() => Math.random() - 0.5).slice(0, 4);
   window._shapeQ = { ans: n, options };
   document.getElementById('shape-area').innerHTML = `
-    <div class="shape-row">${row.split('').map(c => `<span class="shape-cell">${c}</span>`).join('')}</div>
+    <div class="shape-row">${cells.map(c => `<span class="shape-cell">${c}</span>`).join('')}</div>
     <div class="quiz-q">数一数：图里有几个${name}？</div>
     <div class="py-options">${options.map(o => `<button class="py-opt" onclick="shapeAns(${o}, this)">${o}</button>`).join('')}</div>
     <div id="shape-fb"></div>`;
