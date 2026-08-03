@@ -40,7 +40,7 @@ RENDERERS.home = function () {
       </div>
     </div>
     <div class="mod-grid">${mods.map(m => `
-      <div class="mod-card ${m.done ? 'mod-done' : ''}" onclick="nav('${m.id}')">
+      <div class="mod-card mod-${m.id} ${m.done ? 'mod-done' : ''}" onclick="nav('${m.id}')">
         <span class="mod-icon">${m.icon}</span>
         <b>${m.name}</b><small>${m.sub}</small>
         <span class="mod-flag">${m.done ? '✅' : ''}</span>
@@ -251,15 +251,51 @@ RENDERERS.shangcheng = function () {
 function redeem(id) {
   const r = state.rewards.find(x => x.id === id);
   if (!r || state.beans < r.cost) return;
-  let addr = state.shopAddr;
-  if (!confirm(`用 ${r.cost} 学习豆兑换「${r.icon} ${r.name}」吗？`)) return;
-  const addrInput = prompt('填收货地址/备注（可留空，家长当面兑现）：', state.shopAddr || '');
-  if (addrInput !== null) addr = addrInput;
+  showExchangeModal(r);
+}
+/* 兑换表单弹窗（收货人/电话/地址） */
+function showExchangeModal(r) {
+  closeModal();
+  const mask = el(`
+    <div class="modal-mask" id="ex-modal" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <div class="modal-title">${r.icon} 兑换 ${esc(r.name)}</div>
+        <div class="modal-sub">将消耗 <b style="color:var(--orange)">${r.cost} 🪙</b>，学习豆余额 ${state.beans}</div>
+        <div class="modal-field"><label>收货人姓名</label><input id="ex-name" placeholder="小朋友或家长姓名" value="${esc(state.shopName || '')}"></div>
+        <div class="modal-field"><label>联系电话</label><input id="ex-phone" type="tel" placeholder="手机号" value="${esc(state.shopPhone || '')}"></div>
+        <div class="modal-field"><label>收货地址</label><input id="ex-addr" placeholder="省市区 + 详细地址" value="${esc(state.shopAddr || '')}"></div>
+        <div class="modal-btns">
+          <button class="mini-btn" onclick="closeModal()">取消</button>
+          <button class="mini-btn primary" onclick="confirmExchange('${r.id}')">🎁 确认兑换</button>
+        </div>
+      </div>
+    </div>`);
+  document.body.appendChild(mask);
+  const name = document.getElementById('ex-name');
+  if (name) setTimeout(() => name.focus(), 100);
+}
+function closeModal() {
+  const m = document.getElementById('ex-modal');
+  if (m) m.remove();
+}
+function confirmExchange(id) {
+  const r = state.rewards.find(x => x.id === id);
+  if (!r || state.beans < r.cost) return;
+  const name = (document.getElementById('ex-name') || {}).value || '';
+  const phone = (document.getElementById('ex-phone') || {}).value || '';
+  const addr = (document.getElementById('ex-addr') || {}).value || '';
+  if (!name.trim()) { alert('请填写收货人姓名'); return; }
+  if (!phone.trim() || phone.trim().length < 7) { alert('请填写正确的联系电话'); return; }
+  if (!addr.trim()) { alert('请填写收货地址'); return; }
+  state.shopName = name.trim();
+  state.shopPhone = phone.trim();
+  state.shopAddr = addr.trim();
   state.beans -= r.cost;
-  state.history.unshift({ name: r.name, icon: r.icon, cost: r.cost, date: todayStr(), addr: addr || '' });
+  state.history.unshift({ name: r.name, icon: r.icon, cost: r.cost, date: todayStr(), addr: addr.trim(), receiver: name.trim(), phone: phone.trim() });
   saveState(); confetti();
+  closeModal();
   renderPage('shangcheng'); renderHeader();
-  setTimeout(() => alert(`🎉 兑换成功！${r.icon} ${r.name}\n家长记得兑现承诺哦～`), 400);
+  setTimeout(() => alert(`🎉 兑换成功！${r.icon} ${r.name}\n收货人：${name.trim()}\n家长记得安排发货哦～`), 300);
 }
 
 /* ---------- 家长中心 ---------- */
@@ -314,9 +350,11 @@ RENDERERS.jiazhang = function () {
       </div>
     </div>
     <div class="card">
-      <div class="card-head">🏠 收货地址备注</div>
-      <div class="add-row"><input id="shop-addr" placeholder="默认收货地址（兑换时可改）" value="${esc(state.shopAddr)}">
-        <button class="mini-btn primary" onclick="saveAddr()">💾</button></div>
+      <div class="card-head">🏠 收货信息（兑换表单默认值）</div>
+      <div class="add-row"><input id="shop-name" placeholder="收货人姓名" value="${esc(state.shopName)}">
+        <input id="shop-phone" placeholder="联系电话" value="${esc(state.shopPhone)}"></div>
+      <div class="add-row"><input id="shop-addr" placeholder="收货地址（省市区+详细）" value="${esc(state.shopAddr)}">
+        <button class="mini-btn primary" onclick="saveAddr()">💾 保存</button></div>
     </div>
     <div class="card">
       <div class="card-head">💾 数据备份</div>
@@ -387,13 +425,15 @@ function editReward(i) {
 }
 function delReward(i) { if (confirm('删除这个奖品？')) { state.rewards.splice(i, 1); saveState(); renderPage('jiazhang'); } }
 function saveAddr() {
-  state.shopAddr = document.getElementById('shop-addr').value.trim();
+  state.shopName = (document.getElementById('shop-name') || {}).value || '';
+  state.shopPhone = (document.getElementById('shop-phone') || {}).value || '';
+  state.shopAddr = (document.getElementById('shop-addr') || {}).value || '';
   saveState(); alert('✅ 已保存');
 }
 
 /* ---------- 备份导出 / 导入 ---------- */
 function exportData() {
-  const data = { tasks: state.tasks, beans: state.beans, rewards: state.rewards, history: state.history, mistakes: state.mistakes, log: state.log, hanziStatus: state.hanziStatus, weakHanzi: state.weakHanzi, hanziDaily: state.hanziDaily, favGushi: state.favGushi, madeup: state.madeup, settings: state.settings, shopAddr: state.shopAddr };
+  const data = { tasks: state.tasks, beans: state.beans, rewards: state.rewards, history: state.history, mistakes: state.mistakes, log: state.log, hanziStatus: state.hanziStatus, weakHanzi: state.weakHanzi, hanziDaily: state.hanziDaily, favGushi: state.favGushi, madeup: state.madeup, settings: state.settings, shopName: state.shopName, shopPhone: state.shopPhone, shopAddr: state.shopAddr };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = '幼小衔接工作台备份-' + todayStr() + '.json';
@@ -422,6 +462,8 @@ function importData(input) {
       state.favGushi = d.favGushi || [];
       state.madeup = d.madeup || [];
       state.settings = d.settings || { maxMin: 0, showStreak: true };
+      state.shopName = d.shopName || '';
+      state.shopPhone = d.shopPhone || '';
       state.shopAddr = d.shopAddr || '';
       saveState(); confetti();
       alert('✅ 备份恢复成功！页面即将刷新');

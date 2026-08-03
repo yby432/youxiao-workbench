@@ -53,6 +53,8 @@ const state = {
   hanziDaily: Store.get('yx_hanziDaily', {}),         // {date: {learned, mastered}}
   favGushi: Store.get('yx_favGushi', []),             // 收藏古诗标题
   madeup: Store.get('yx_madeup', []),                 // 补卡日期列表 ['2026-08-01']
+  shopName: Store.get('yx_shopName', ''),              // 收货人
+  shopPhone: Store.get('yx_shopPhone', ''),            // 联系电话
   shopAddr: Store.get('yx_shopAddr', ''),             // 收货地址备注
   settings: Store.get('yx_settings', { maxMin: 0, showStreak: true })
 };
@@ -64,6 +66,7 @@ function saveState() {
   Store.set('yx_hanziStatus', state.hanziStatus); Store.set('yx_weakHanzi', state.weakHanzi);
   Store.set('yx_hanziDaily', state.hanziDaily); Store.set('yx_favGushi', state.favGushi);
   Store.set('yx_madeup', state.madeup); Store.set('yx_shopAddr', state.shopAddr);
+  Store.set('yx_shopName', state.shopName); Store.set('yx_shopPhone', state.shopPhone);
   Store.set('yx_settings', state.settings);
 }
 

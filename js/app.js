@@ -206,6 +206,10 @@ RENDERERS.pinyin = function () {
       </div>
     </div>
     <div class="card">
+      <div class="card-head">🎵 声调辨析 <span class="sub">听/看声调选第几声</span> <button class="mini-btn" onclick="genToneQ()">🎲 出新题</button></div>
+      <div id="tone-area"><div class="empty-tip">一（ˉ）二（ˊ）三（ˇ）四（ˋ）声，考考你的耳朵和眼睛</div></div>
+    </div>
+    <div class="card">
       <div class="card-head">🎮 拼音闯关 <span class="sub">汉字拼音对对碰</span></div>
       <div class="empty-tip">去游戏区挑战拼音闯关，赢星星 ⭐</div>
       <button class="mini-btn primary" onclick="nav('youxi')">🎮 开始闯关</button>
@@ -227,11 +231,13 @@ RENDERERS.gushi = function () {
     <div class="card gushi-card">
       <div class="card-head">🏮 今日必背
         <button class="mini-btn" onclick="speak('${esc(g.l.join('，'))}','zh-CN')">🔊 朗读</button>
+        <button class="mini-btn" onclick="speak('${esc(TRANSLATIONS[g.t] || '')}','zh-CN')">💬 听译文</button>
         <button class="mini-btn ${fav ? 'fav-on' : ''}" onclick="toggleFav('${esc(g.t)}')">${fav ? '♥ 已收藏' : '♡ 收藏'}</button>
       </div>
       <div class="gushi-title">《${g.t}》 <span class="gushi-author">${g.d} · ${g.a}</span></div>
       <div class="gushi-lines">${g.l.map(x => `<div>${x}</div>`).join('')}</div>
-      <div class="card-foot">跟着朗读读 3 遍，然后自己背一遍，会背了就去打卡 ✅</div>
+      ${TRANSLATIONS[g.t] ? `<div class="gushi-trans">💡 白话译文：${esc(TRANSLATIONS[g.t])}</div>` : ''}
+      <div class="card-foot">跟着朗读读 3 遍，看看译文讲的故事，然后自己背一遍，会背了就去打卡 ✅</div>
       <div style="margin-top:10px">${punchBtn('t-gushi', '我会背了，打卡 +3🪙')}</div>
     </div>
     <div class="card">
@@ -263,11 +269,13 @@ function gushiDetail(i) {
   document.querySelector('.gushi-card').innerHTML = `
     <div class="card-head">🏮 古诗详情
       <button class="mini-btn" onclick="speak('${esc(g.l.join('，'))}','zh-CN')">🔊 朗读</button>
+      <button class="mini-btn" onclick="speak('${esc(TRANSLATIONS[g.t] || '')}','zh-CN')">💬 听译文</button>
       <button class="mini-btn ${fav ? 'fav-on' : ''}" onclick="toggleFav('${esc(g.t)}')">${fav ? '♥ 已收藏' : '♡ 收藏'}</button>
       <button class="mini-btn" onclick="renderPage('gushi')">↩ 返回</button>
     </div>
     <div class="gushi-title">《${g.t}》 <span class="gushi-author">${g.d} · ${g.a}</span></div>
     <div class="gushi-lines">${g.l.map(x => `<div>${x}</div>`).join('')}</div>
+    ${TRANSLATIONS[g.t] ? `<div class="gushi-trans">💡 白话译文：${esc(TRANSLATIONS[g.t])}</div>` : ''}
     <div class="gushi-chant">🎤 和爸爸妈妈一起朗诵这首诗，说说你最喜欢哪一句</div>`;
 }
 
@@ -375,15 +383,17 @@ function startKousuan() {
   cfg.count = parseInt(document.getElementById('ks-count').value, 10);
   cfg.method = document.getElementById('ks-method').value;
   saveState();
-  ks = { list: genKousuanPaper(cfg.count, cfg.method === '随机' ? null : cfg.method), idx: 0, right: 0, wrong: [] };
+  ks = { list: genKousuanPaper(cfg.count, cfg.method === '随机' ? null : cfg.method), idx: 0, right: 0, wrong: [], start: Date.now() };
   renderKousuan();
 }
 function renderKousuan() {
   const area = document.getElementById('ks-area');
   if (!ks) return;
   if (ks.idx >= ks.list.length) {
+    const sec = Math.round((Date.now() - ks.start) / 1000);
+    const used = sec >= 60 ? `${Math.floor(sec / 60)}分${sec % 60}秒` : `${sec}秒`;
     area.innerHTML = `
-      <div class="ks-result"><div class="ks-score">${ks.wrong.length === 0 ? '🏆' : '💪'} 完成！答对 ${ks.right}/${ks.list.length}</div>
+      <div class="ks-result"><div class="ks-score">${ks.wrong.length === 0 ? '🏆' : '💪'} 完成！答对 ${ks.right}/${ks.list.length} · 用时 ${used}</div>
       ${ks.wrong.length ? `<div class="ks-wrong">错题已存入复习本</div>` : '<div class="ks-wrong ok">全部正确，太厉害啦！</div>'}
       <button class="mini-btn primary" onclick="startKousuan()">🔄 再来一组</button></div>`;
     return;
@@ -626,3 +636,45 @@ function jumpToggle() {
 function jumpPlus() { jumpCount++; const c = document.getElementById('jump-count'); if (c) { c.textContent = jumpCount; pop(c); } }
 function jumpReset() { clearInterval(jumpTimer); jumpRunning = false; jumpSec = 0; jumpCount = 0; const t = document.getElementById('jump-time'); if (t) t.textContent = '00:00'; const c = document.getElementById('jump-count'); if (c) c.textContent = '0'; const b = document.getElementById('jump-btn'); if (b) b.textContent = '▶️ 开始'; }
 function vestRefresh() { state.dayOffset++; saveState(); renderPage('yundong'); }
+
+/* ---------- 声调辨析练习 ---------- */
+let toneQuiz = null;
+function genToneQ() {
+  const pool = shuffleArr(SYLLABLE_POOL, seedNow() + 33).slice(0, 5);
+  const quiz = pool.map(([syl, sm, ym, ch]) => ({
+    syl, ch: ch || '', tone: 1 + Math.floor(Math.random() * 4),
+    options: [1, 2, 3, 4]
+  }));
+  toneQuiz = { list: quiz, idx: 0, right: 0 };
+  renderToneQ();
+}
+function renderToneQ() {
+  const area = document.getElementById('tone-area');
+  if (!area) return;
+  if (!toneQuiz) return;
+  if (toneQuiz.idx >= toneQuiz.list.length) {
+    area.innerHTML = `<div class="quiz-done">🎉 完成！答对 ${toneQuiz.right}/${toneQuiz.list.length}
+      <button class="mini-btn primary" onclick="genToneQ()">🔄 再来一组</button></div>`;
+    return;
+  }
+  const q = toneQuiz.list[toneQuiz.idx];
+  const syl = addTone(q.syl, q.tone);
+  area.innerHTML = `
+    <div class="tone-question"><b>${syl}</b>${q.ch ? `<span class="tone-char">（${q.ch}）</span>` : ''}</div>
+    <div class="tone-hint">这个音节是第几声？<button class="mini-btn" onclick="speak('${esc(q.ch || syl)}','zh-CN')">🔊 听发音</button></div>
+    <div class="py-options">${q.options.map(t => `<button class="py-opt" onclick="toneAns(${t}, this)">${t} 声</button>`).join('')}</div>
+    <div id="tone-fb"></div>`;
+}
+function toneAns(t, btn) {
+  const q = toneQuiz.list[toneQuiz.idx];
+  const fb = document.getElementById('tone-fb');
+  if (t === q.tone) { toneQuiz.right++; btn.classList.add('ok'); fb.innerHTML = '<div class="fb right">✅ 答对啦！</div>'; }
+  else {
+    btn.classList.add('bad');
+    document.querySelectorAll('#tone-area .py-opt').forEach(b => { if (parseInt(b.textContent, 10) === q.tone) b.classList.add('ok'); });
+    fb.innerHTML = `<div class="fb wrong">❌ 正确答案是 ${q.tone} 声（${addTone(q.syl, q.tone)}）</div>`;
+  }
+  document.querySelectorAll('#tone-area .py-opt').forEach(b => b.disabled = true);
+  toneQuiz.idx++;
+  setTimeout(renderToneQ, 1000);
+}
