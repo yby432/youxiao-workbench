@@ -26,7 +26,7 @@ RENDERERS.youxi = function () {
     </div>
     <div class="card">
       <div class="card-head">💡 玩中学</div>
-      <div class="card-foot">闯关游戏也计入「益智游戏」打卡任务哦，玩 15 分钟记得去首页打勾 ✅</div>
+      <div class="card-foot">玩完闯关，记得去首页完成今日「拼音」或「英语」打卡，还能赚学习豆 🪙</div>
     </div>`;
 };
 

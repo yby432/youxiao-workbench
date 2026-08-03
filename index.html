@@ -7,32 +7,39 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="幼小衔接工作台">
+<meta name="apple-mobile-web-app-title" content="幼小衔接学习工作台">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="assets/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="assets/icon-192.png">
-<title>幼小衔接工作台</title>
+<title>幼小衔接学习工作台</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <div class="app">
-  <nav id="side-nav" class="side-nav"></nav>
   <main id="main" class="main">
     <header class="topbar">
       <div id="header-info" class="header-info"></div>
     </header>
     <div class="pages">
       <section id="page-home" class="page active"></section>
-      <section id="page-yuwen" class="page"></section>
-      <section id="page-shuxue" class="page"></section>
+      <section id="page-shizi" class="page"></section>
+      <section id="page-pinyin" class="page"></section>
+      <section id="page-gushi" class="page"></section>
       <section id="page-yingyu" class="page"></section>
+      <section id="page-shuxue" class="page"></section>
+      <section id="page-kepu" class="page"></section>
       <section id="page-yundong" class="page"></section>
+      <section id="page-renwu" class="page"></section>
+      <section id="page-daka" class="page"></section>
+      <section id="page-shuju" class="page"></section>
+      <section id="page-shangcheng" class="page"></section>
+      <section id="page-jiazhang" class="page"></section>
       <section id="page-youxi" class="page"></section>
-      <section id="page-jiangli" class="page"></section>
-      <section id="page-shezhi" class="page"></section>
     </div>
   </main>
 </div>
+<nav id="bottom-nav" class="bottom-nav"></nav>
+<div id="bean-toast" class="bean-toast"></div>
 <div id="fx-layer" class="fx-layer"></div>
 
 <script src="js/data.js"></script>
@@ -40,7 +47,7 @@
 <script src="js/math-gen.js"></script>
 <script src="js/core.js"></script>
 <script src="js/app.js"></script>
+<script src="js/views.js"></script>
 <script src="js/games.js"></script>
-<script src="js/extras.js"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 /* 离线缓存（公网 https 部署时生效）
  * v2：缓存策略改为「网络优先」——线上更新后刷新即可看到新版 */
-const CACHE = 'yx-workbench-v2';
+const CACHE = 'yx-workbench-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -11,8 +11,8 @@ const ASSETS = [
   './js/math-gen.js',
   './js/core.js',
   './js/app.js',
+  './js/views.js',
   './js/games.js',
-  './js/extras.js',
   './assets/icon-192.png',
   './assets/icon-512.png'
 ];
